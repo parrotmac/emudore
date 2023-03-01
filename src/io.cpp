@@ -199,6 +199,9 @@ void IO::init_keyboard()
   keymap_[SDL_SCANCODE_RIGHTBRACKET] = std::make_pair(6,1); // *
   keymap_[SDL_SCANCODE_APOSTROPHE]   = std::make_pair(5,6); // @
   keymap_[SDL_SCANCODE_LGUI]         = std::make_pair(7,5); // commodore key
+
+  // Hack :(
+  memset(paste_buffer, '\0', sizeof(paste_buffer));
 }
 
 /** 
@@ -240,9 +243,51 @@ void IO::process_events()
     switch(event.type)
     {
     case SDL_KEYDOWN:
+      if (event.key.keysym.sym == SDLK_RGUI) {
+        this->super_down_ = true;
+      }
+      if (this->super_down_ && event.key.keysym.sym == SDLK_v) {
+        const char *text = SDL_GetClipboardText();
+        for (int i = 0; text[i] != '\0'; i++) {
+          type_character(text[i]);
+        }
+        break;
+      }
+      if (this->super_down_ && event.key.keysym.sym == SDLK_c) {
+        // Copy screen buffer as ascii for all possible characters
+        // Character screencodes: https://sta.c64.org/cbm64scr.html
+
+        uint8_t screen_buffer[1000] = {};
+        memset(screen_buffer, '\0', 1000);
+        mem_->get_screen_text(screen_buffer);
+        unsigned char screen_ascii_buffer[1025];
+        size_t screen_ascii_buf_loc = 0;
+        for (size_t i = 0; i < 1000; i++) {
+          if (i != 0 && i % 40 == 0) {
+            screen_ascii_buffer[screen_ascii_buf_loc] = '\n';
+            screen_ascii_buf_loc++;
+          }
+          unsigned char screen_ascii = screencode_to_ascii(screen_buffer[i]);
+          screen_ascii_buffer[screen_ascii_buf_loc] = screen_ascii;
+          screen_ascii_buf_loc++;
+        }
+        const char *as_text = reinterpret_cast<const char *>(&screen_ascii_buffer);
+        SDL_SetClipboardText(as_text);
+        break;
+      }
+      if (this->super_down_ && event.key.keysym.sym == SDLK_r) {
+        for (size_t i = 0; i < key_event_queue_.size(); i++) {
+          key_event_queue_.pop();
+        }
+        cpu_->reset();
+        break;
+      }
       handle_keydown(event.key.keysym.scancode);
       break;
     case SDL_KEYUP:
+      if (event.key.keysym.sym == SDLK_RGUI) {
+        this->super_down_ = false;
+      }
       handle_keyup(event.key.keysym.scancode);
       break;
     case SDL_QUIT:
@@ -375,4 +420,22 @@ void IO::vsync()
   auto ttw = duration_cast<milliseconds>(rr - t);
   std::this_thread::sleep_for(ttw);
   prev_frame_was_at_ = std::chrono::high_resolution_clock::now();
+}
+
+unsigned char IO::screencode_to_ascii(unsigned char screencode) {
+  if (screencode == 0x00) {
+    return '@';
+  }
+  if (screencode >= 0x01 && screencode <= 0x1A) {
+    // A-Z (capital)
+    return screencode + 0x40;
+  }
+
+  if (screencode >= 0x20 && screencode <= 0x3F) {
+    // This region maps 1:1 -- nice!
+    return screencode;
+  }
+
+  // Sheepishly bail if we're not sure
+  return ' ';
 }

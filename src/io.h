@@ -41,6 +41,7 @@ class IO
 {
   private:
     Cpu *cpu_;
+    Memory *mem_;
     SDL_Window *window_;
     SDL_Renderer *renderer_;
     SDL_Texture *texture_;
@@ -63,15 +64,19 @@ class IO
     std::queue<std::pair<kKeyEvent,SDL_Keycode>> key_event_queue_;
     unsigned int next_key_event_at_;
     static const int kWait = 18000;
+    bool super_down_ = false;
+    char *paste_buffer[1024 * 10];
     /* vertical refresh sync */
     std::chrono::high_resolution_clock::time_point prev_frame_was_at_;
     void vsync();
+    unsigned char screencode_to_ascii(unsigned char screencode);
   public:
     IO();
     ~IO();
     bool emulate();
     void process_events();
     void cpu(Cpu *v){cpu_=v;};
+    void memory(Memory *v){mem_=v;}
     void init_color_palette();
     void init_keyboard();
     void handle_keydown(SDL_Keycode k);

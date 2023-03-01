@@ -95,6 +95,7 @@ class Memory
     /* debug */
     void dump();
     void print_screen_text();
+    void get_screen_text(uint8_t *buf);
     /* constants */
     static const size_t kMemSize = 0x10000;
     /* memory addresses  */

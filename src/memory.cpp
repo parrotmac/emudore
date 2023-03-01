@@ -306,3 +306,13 @@ void Memory::dump()
     std::cout << read_byte(p);
   }
 }
+
+const uint16_t SCREEN_START_ADDR = 0x0400;
+const uint16_t SCREEN_END_ADDR = 0x07E7;
+const uint16_t SCREEN_BUFFER_SIZE = SCREEN_END_ADDR - SCREEN_START_ADDR + 1;
+
+void Memory::get_screen_text(uint8_t buf[SCREEN_BUFFER_SIZE]) {
+  for (int i = 0; i < SCREEN_BUFFER_SIZE; i++) {
+    buf[i] = read_byte(i + SCREEN_START_ADDR);
+  }
+}

@@ -41,6 +41,7 @@ C64::C64()
   cia2_->cpu(cpu_);
   /* init io */
   io_->cpu(cpu_);
+  io_->memory(mem_);
   /* DMA */
   mem_->vic(vic_);
   mem_->cia1(cia1_);
